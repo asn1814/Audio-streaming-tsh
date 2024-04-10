@@ -18,33 +18,38 @@ struct ContentView: View {
         audioEngine = AVAudioEngine()
         inputNode = audioEngine.inputNode
         playerNode = AVAudioPlayerNode()
-        bufferDuration = AVAudioFrameCount(352)
+        bufferDuration = 768// AVAudioFrameCount(352)
     }
     
     func startStreaming() -> Void {
         // Configuration the session
         do {
             let audioSession = AVAudioSession.sharedInstance()
-            try audioSession.setCategory(.playAndRecord, mode: .measurement)
+            try audioSession.setCategory(.playAndRecord, mode: .voiceChat)
             // TODO: Adjust to work with TSH model
-            try audioSession.setPreferredSampleRate(44100)
+            try audioSession.setPreferredSampleRate(96000)
             // 8ms buffers
             try audioSession.setPreferredIOBufferDuration(0.008)
             try audioSession.setActive(true)
         } catch {
             print("Audio Session error: \(error)")
         }
+      
+        let fmt = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: 96000, channels: 2, interleaved: false)
         
         // Set the playerNode to immedietly queue/play the recorded buffer
-        inputNode.installTap(onBus: 0, bufferSize: bufferDuration, format: inputNode.inputFormat(forBus: 0)) { (buffer, when) in
+        inputNode.installTap(onBus: 0, bufferSize: bufferDuration, format: fmt/*inputNode.inputFormat(forBus: 0)*/) { (buffer, when) in
             // Schedule the buffer for playback
+            print(buffer.format)
+            print(buffer.frameCapacity)
+            print(buffer.frameLength)
             playerNode.scheduleBuffer(buffer, at: nil, options: [], completionHandler: nil)
         }
         
         // Start the engine
         do {
             audioEngine.attach(playerNode)
-            audioEngine.connect(playerNode, to: audioEngine.outputNode, format: inputNode.inputFormat(forBus: 0))
+            audioEngine.connect(playerNode, to: audioEngine.outputNode, format: fmt/*inputNode.inputFormat(forBus: 0)*/)
             
             try audioEngine.start()
             playerNode.play()
